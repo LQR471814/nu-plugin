@@ -289,12 +289,12 @@ func (np *NamedParams) encodeMsgpack(enc *msgpack.Encoder, p *Plugin) error {
 	if err := enc.EncodeArrayLen(len(*np)); err != nil {
 		return err
 	}
-	var parName npName
+	var parName spanned[string]
 	for name, v := range *np {
 		if err := enc.EncodeArrayLen(2); err != nil {
 			return err
 		}
-		parName.Name = name
+		parName.Item = name
 		if err := enc.EncodeValue(reflect.ValueOf(&parName)); err != nil {
 			return fmt.Errorf("writing named params [%s] key: %w", name, err)
 		}
@@ -324,7 +324,7 @@ func (np *NamedParams) decodeMsgpack(dec *msgpack.Decoder, p *Plugin) error {
 		}
 
 		// {item: str, span: Span}
-		var name npName
+		var name spanned[string]
 		if err := dec.DecodeValue(reflect.ValueOf(&name)); err != nil {
 			return fmt.Errorf("reading named params [%d] key: %w", idx, err)
 		}
@@ -343,14 +343,9 @@ func (np *NamedParams) decodeMsgpack(dec *msgpack.Decoder, p *Plugin) error {
 				return fmt.Errorf("reading named params [%d] value: %w", idx, err)
 			}
 		}
-		(*np)[name.Name] = v
+		(*np)[name.Item] = v
 	}
 	return nil
-}
-
-type npName struct {
-	Name string `msgpack:"item"`
-	Span Span   `msgpack:"span"`
 }
 
 func (cr *callResponse) encodeMsgpack(enc *msgpack.Encoder, p *Plugin) error {

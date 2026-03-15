@@ -143,20 +143,14 @@ type (
 	toBaseValue struct{}
 
 	followPathInt struct {
-		Path struct {
-			Item uint `msgpack:"item"`
-			Span Span `msgpack:"span"`
-		} `msgpack:"index"`
-		Optional bool `msgpack:"optional"`
+		Path     spanned[uint] `msgpack:"index"`
+		Optional bool          `msgpack:"optional"`
 	}
 
 	followPathString struct {
-		Path struct {
-			Item string `msgpack:"item"`
-			Span Span   `msgpack:"span"`
-		} `msgpack:"column_name"`
-		Optional bool   `msgpack:"optional"`
-		Casing   string `msgpack:"casing"`
+		Path     spanned[string] `msgpack:"column_name"`
+		Optional bool            `msgpack:"optional"`
+		Casing   string          `msgpack:"casing"`
 	}
 
 	partialCmp struct{ value Value }
@@ -167,10 +161,7 @@ type (
 	}
 
 	save struct {
-		Path struct {
-			Item string `msgpack:"item"`
-			Span Span   `msgpack:"span"`
-		} `msgpack:"path"`
+		Path spanned[string] `msgpack:"path"`
 	}
 )
 
