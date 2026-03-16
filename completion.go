@@ -153,7 +153,7 @@ func (exp *expression) DecodeMsgpack(dec *msgpack.Decoder) error {
 
 func (exp *expression) String() string {
 	s := "Expression{"
-	s += fmt.Sprintf("Expr: %v", exp.Expr)
+	s += fmt.Sprintf("Expr: %s", exp.Expr.String())
 	if exp.Ty != nil {
 		s += fmt.Sprintf(" Ty: %s", exp.Ty)
 	}
@@ -253,14 +253,14 @@ func (exp *expr) String() string {
 	case "Int":
 		s += fmt.Sprintf(": %d", exp.i)
 	case "Filepath", "Directory", "GlobPattern":
-		s += fmt.Sprintf(": %s, %t", exp.str, exp.b)
+		s += fmt.Sprintf(": %s ; quoted: %t", exp.str, exp.b)
 	default:
-		s += fmt.Sprintf("raw: %x", exp.raw)
+		s += fmt.Sprintf(" raw: %x", exp.raw)
 	}
 	return s + "}"
 }
 
-func (iot *expr) DecodeMsgpack(dec *msgpack.Decoder) error {
+func (exp *expr) DecodeMsgpack(dec *msgpack.Decoder) error {
 	c, err := dec.PeekCode()
 	if err != nil {
 		return fmt.Errorf("peeking item type: %w", err)
@@ -268,31 +268,45 @@ func (iot *expr) DecodeMsgpack(dec *msgpack.Decoder) error {
 
 	switch {
 	case msgpcode.IsFixedString(c), msgpcode.IsString(c):
-		if iot.name, err = dec.DecodeString(); err != nil {
+		if exp.name, err = dec.DecodeString(); err != nil {
 			return fmt.Errorf("decoding type name: %w", err)
 		}
 		// todo: check do we recognize this type? Expecting:
 		// Nothing, Garbage
 	case msgpcode.IsFixedMap(c):
-		if iot.name, err = mpack.DecodeWrapperMap(dec); err != nil {
+		if exp.name, err = mpack.DecodeWrapperMap(dec); err != nil {
 			return err
 		}
 
-		switch iot.name {
+		switch exp.name {
 		case "String", "RawString":
-			if iot.str, err = dec.DecodeString(); err != nil {
-				return fmt.Errorf("decode %s value: %w", iot.name, err)
+			if exp.str, err = dec.DecodeString(); err != nil {
+				return fmt.Errorf("decode %s value: %w", exp.name, err)
 			}
 		case "Bool":
-			if iot.b, err = dec.DecodeBool(); err != nil {
-				return fmt.Errorf("decode %s value: %w", iot.name, err)
+			if exp.b, err = dec.DecodeBool(); err != nil {
+				return fmt.Errorf("decode %s value: %w", exp.name, err)
 			}
 		case "Int":
-			if iot.i, err = dec.DecodeInt64(); err != nil {
-				return fmt.Errorf("decode %s value: %w", iot.name, err)
+			if exp.i, err = dec.DecodeInt64(); err != nil {
+				return fmt.Errorf("decode %s value: %w", exp.name, err)
+			}
+		case "Filepath", "Directory", "GlobPattern":
+			n, err := dec.DecodeArrayLen()
+			if err != nil {
+				return err
+			}
+			if n != 2 {
+				return fmt.Errorf("expected array with two items, got %d", n)
+			}
+			if exp.str, err = dec.DecodeString(); err != nil {
+				return fmt.Errorf("decode %s value: %w", exp.name, err)
+			}
+			if exp.b, err = dec.DecodeBool(); err != nil {
+				return fmt.Errorf("decode %s value: %w", exp.name, err)
 			}
 		default:
-			iot.raw, err = dec.DecodeRaw()
+			exp.raw, err = dec.DecodeRaw()
 		}
 	default:
 		return fmt.Errorf("unsupported Expr start code: %d", c)
