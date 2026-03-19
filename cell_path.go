@@ -91,9 +91,13 @@ func (cp *CellPath) decodeMsgpack(dec *msgpack.Decoder, p *Plugin) error {
 	if key != "members" {
 		return fmt.Errorf("expected key 'members', got %q", key)
 	}
+	return cp.decodeMembers(dec)
+}
+
+func (cp *CellPath) decodeMembers(dec *msgpack.Decoder) error {
 	cnt, err := dec.DecodeArrayLen()
 	if err != nil {
-		return err
+		return fmt.Errorf("decoding CellPath member count: %w", err)
 	}
 	for idx := range cnt {
 		m, err := decodePathMember(dec)

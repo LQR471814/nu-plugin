@@ -239,6 +239,9 @@ type expr struct {
 	str  string // string value
 	b    bool   // bool value or flag
 	i    int64
+	u    uint64
+	exp  *expression
+	v    Value
 	raw  msgpack.RawMessage
 }
 
@@ -254,6 +257,14 @@ func (exp *expr) String() string {
 		s += fmt.Sprintf(": %d", exp.i)
 	case "Filepath", "Directory", "GlobPattern":
 		s += fmt.Sprintf(": %s ; quoted: %t", exp.str, exp.b)
+	case "FullCellPath":
+		s += fmt.Sprintf(" head: %s ; tail: %s", exp.exp, exp.v.Value)
+	case "CellPath":
+		s += fmt.Sprintf(" %s", exp.v.Value)
+	case "RowCondition", "Subexpression", "Block", "Closure", "Var", "VarDecl":
+		s += fmt.Sprintf(": %d", exp.u)
+	case "Binary":
+		s += fmt.Sprintf(" 0x[%x]", exp.raw)
 	default:
 		s += fmt.Sprintf(" raw: %x", exp.raw)
 	}
@@ -305,6 +316,33 @@ func (exp *expr) DecodeMsgpack(dec *msgpack.Decoder) error {
 			if exp.b, err = dec.DecodeBool(); err != nil {
 				return fmt.Errorf("decode %s value: %w", exp.name, err)
 			}
+		case "FullCellPath":
+			return decodeMap(exp.name, dec, func(dec *msgpack.Decoder, key string) (err error) {
+				switch key {
+				case "head":
+					exp.exp = &expression{}
+					return dec.Decode(exp.exp)
+				case "tail":
+					cp := CellPath{}
+					if err = cp.decodeMembers(dec); err != nil {
+						return err
+					}
+					exp.v.Value = cp
+					return nil
+				default:
+					return errUnknownField
+				}
+			})
+		case "CellPath":
+			cp := CellPath{}
+			if err = cp.decodeMsgpack(dec, nil); err != nil {
+				return err
+			}
+			exp.v.Value = cp
+		case "RowCondition", "Subexpression", "Block", "Closure", "Var", "VarDecl":
+			exp.u, err = dec.DecodeUint64()
+		case "Binary":
+			exp.raw, err = decodeBinary(dec)
 		default:
 			exp.raw, err = dec.DecodeRaw()
 		}
