@@ -4,8 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 
 	"github.com/ainvaltin/nu-plugin"
@@ -39,9 +41,10 @@ func main() {
 			// actual demo commands
 			cmdCompletion(),
 			cmdEcho(),
+			cmdWhat(),
 		},
 		"0.0.1",
-		nil,
+		getConfig(),
 	)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "failed to create plugin:", err)
@@ -64,4 +67,31 @@ func quitSignalContext() context.Context {
 	}()
 
 	return ctx
+}
+
+func getConfig() *nu.Config {
+	// in order to log before using the plugin execute
+	// export-env { $env.NPT_LOG_PATH = "/path/to/logs/"}
+	path := os.Getenv("NPT_LOG_PATH")
+	if path == "" {
+		return nil
+	}
+
+	fIn, err := os.Create(filepath.Join(path, "input.log"))
+	if err != nil {
+		panic(err)
+	}
+	fOut, err := os.Create(filepath.Join(path, "output.log"))
+	if err != nil {
+		panic(err)
+	}
+	fLog, err := os.Create(filepath.Join(path, "log.txt"))
+	if err != nil {
+		panic(err)
+	}
+	return &nu.Config{
+		Logger:   slog.New(slog.NewTextHandler(fLog, &slog.HandlerOptions{Level: slog.LevelDebug})),
+		SniffIn:  fIn,
+		SniffOut: fOut,
+	}
 }

@@ -39,6 +39,11 @@ func cmdEcho() *nu.Command {
 
 func handleCmdEcho(ctx context.Context, ec *nu.ExecCommand) error {
 	switch in := ec.Input.(type) {
+	case nil:
+		if len(ec.Positional) > 0 {
+			return ec.ReturnValue(ctx, ec.Positional[0])
+		}
+		return nil
 	case nu.Value:
 		return ec.ReturnValue(ctx, in)
 	case io.Reader:

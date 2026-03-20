@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -44,10 +45,10 @@ func main() {
 			OnRun: boltCmdHandler,
 		}},
 		"0.0.1",
-		nil,
+		debugCfg(),
 	)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "failed to create plugin", err)
+		fmt.Fprintln(os.Stderr, "failed to create plugin:", err)
 		return
 	}
 	if err := p.Run(quitSignalContext()); err != nil && !errors.Is(err, nu.ErrGoodbye) {
@@ -119,4 +120,31 @@ func quitSignalContext() context.Context {
 	}()
 
 	return ctx
+}
+
+func debugCfg() *nu.Config {
+	// in order to log before using the plugin execute
+	// export-env { $env.BBOLT_LOG_PATH = "/path/to/logs/"}
+	path := os.Getenv("BBOLT_LOG_PATH")
+	if path == "" {
+		return nil
+	}
+
+	fIn, err := os.Create(filepath.Join(path, "input.log"))
+	if err != nil {
+		panic(err)
+	}
+	fOut, err := os.Create(filepath.Join(path, "output.log"))
+	if err != nil {
+		panic(err)
+	}
+	fLog, err := os.Create(filepath.Join(path, "log.txt"))
+	if err != nil {
+		panic(err)
+	}
+	return &nu.Config{
+		Logger:   slog.New(slog.NewTextHandler(fLog, &slog.HandlerOptions{Level: slog.LevelDebug})),
+		SniffIn:  fIn,
+		SniffOut: fOut,
+	}
 }
