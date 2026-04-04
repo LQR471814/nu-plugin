@@ -37,8 +37,8 @@ func (cr *engineCallResponse) decodeMsgpack(dec *msgpack.Decoder, p *Plugin) (er
 		}
 		cr.Response = pd
 	case "ValueMap":
-		m := map[string]Value{}
-		if err = dec.DecodeValue(reflect.ValueOf(&m)); err != nil {
+		var m map[string]Value
+		if m, err = decodeRecord(dec, p); err != nil {
 			return fmt.Errorf("decoding ValueMap of EngineCallResponse: %w", err)
 		}
 		cr.Response = m
@@ -559,7 +559,7 @@ func Positional(args ...Value) EvalArgument {
 
 // InputValue allows to set single-value input for the call.
 func InputValue(arg Value) EvalArgument {
-	return evalArgument{fn: func(ec *evalArguments) error { return ec.setInput(arg) }}
+	return evalArgument{fn: func(ec *evalArguments) error { return ec.setInput(pipelineValue{V: arg}) }}
 }
 
 func InputListStream(arg <-chan Value) EvalArgument {

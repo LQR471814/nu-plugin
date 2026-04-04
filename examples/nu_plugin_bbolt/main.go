@@ -45,7 +45,7 @@ func main() {
 			OnRun: boltCmdHandler,
 		}},
 		"0.0.1",
-		debugCfg(),
+		getConfig(),
 	)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "failed to create plugin:", err)
@@ -122,7 +122,7 @@ func quitSignalContext() context.Context {
 	return ctx
 }
 
-func debugCfg() *nu.Config {
+func getConfig() *nu.Config {
 	// in order to log before using the plugin execute
 	// export-env { $env.BBOLT_LOG_PATH = "/path/to/logs/"}
 	path := os.Getenv("BBOLT_LOG_PATH")

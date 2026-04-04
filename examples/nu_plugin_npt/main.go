@@ -42,6 +42,7 @@ func main() {
 			cmdCompletion(),
 			cmdEcho(),
 			cmdWhat(),
+			cmdEngineCalls(),
 		},
 		"0.0.1",
 		getConfig(),

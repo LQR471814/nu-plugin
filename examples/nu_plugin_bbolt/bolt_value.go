@@ -34,6 +34,27 @@ func (r boltValue) NotifyOnDrop() bool { return false }
 
 func (r boltValue) Dropped(ctx context.Context) error { return nil }
 
+/*
+Called when ie
+
+	boltval ./test.db [bar foo] | $in.0 | save out.val
+
+is executed. The $in there is a list of boltValues. However
+
+	boltval ./test.db [bar foo] | $in | save out.val
+
+will result in error:
+Error: nu::shell::cant_convert
+
+	 × Can't convert to string.
+	  ╭─[`into value` inner redirect:1:1]
+	1 │ update cells {detect type}
+	  · ▲
+	  · ╰── can't convert bbolt to string
+	  ╰────
+
+ie in that case the callback is not called, not for save nor for converting to string?
+*/
 func (r boltValue) Save(ctx context.Context, path string) error {
 	buf, err := r.value()
 	if err != nil {
