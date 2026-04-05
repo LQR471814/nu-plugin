@@ -28,7 +28,7 @@ type DynamicSuggestion struct {
 	//Kind Option<SuggestionKind> https://docs.rs/nu-protocol/latest/nu_protocol/enum.SuggestionKind.html
 }
 
-func (ds DynamicSuggestion) encodeMsgpack(enc *msgpack.Encoder, p *Plugin) (err error) {
+func (ds DynamicSuggestion) encodeMsgpack(enc *msgpack.Encoder, p *Plugin) error {
 	items := mpack.MapItems{
 		mpack.EncoderFuncString("value", ds.Value),
 		mpack.EncoderFuncBool("append_whitespace", ds.AppendWhitespace),
@@ -38,19 +38,10 @@ func (ds DynamicSuggestion) encodeMsgpack(enc *msgpack.Encoder, p *Plugin) (err 
 	items.AddOptionalEncoder(len(ds.Extra) > 0, mpack.EncoderFuncArray("extra", ds.Extra, enc.EncodeString))
 	items.AddOptionalEncoder(len(ds.MatchIndices) > 0, mpack.EncoderFuncArray("match_indices", ds.MatchIndices, enc.EncodeUint64))
 	if ds.Span != nil {
-		items = append(items,
-			func(enc *msgpack.Encoder) error {
-				if err := enc.EncodeString("span"); err != nil {
-					return err
-				}
-				return ds.Span.encodeMsgpack(enc)
-			})
+		items = append(items, mpack.EncoderFuncMarshal("span", ds.Span.encodeMsgpack))
 	}
 
-	if err = items.EncodeMap(enc); err != nil {
-		return fmt.Errorf("encoding DynamicSuggestion: %w", err)
-	}
-	return nil
+	return items.EncodeMap("DynamicSuggestion", enc)
 }
 
 /*

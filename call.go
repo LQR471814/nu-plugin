@@ -168,7 +168,7 @@ func (ec *evaluatedCall) encodeMsgpack(enc *msgpack.Encoder, p *Plugin) error {
 		mpack.EncoderFuncMarshal("positional", func(enc *msgpack.Encoder) error { return ec.Positional.encodeMsgpack(enc, p) }),
 		mpack.EncoderFuncMarshal("named", func(enc *msgpack.Encoder) error { return ec.Named.encodeMsgpack(enc, p) }),
 	}
-	return v.EncodeMap(enc)
+	return v.EncodeMap("evaluatedCall", enc)
 }
 
 func (ec *evaluatedCall) decodeMsgpack(dec *msgpack.Decoder, p *Plugin) error {

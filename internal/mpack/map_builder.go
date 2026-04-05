@@ -13,14 +13,17 @@ type MapItems []MsgpackEncFunc
 /*
 EncodeMap encodes fixed size map using the enc - it writes the number of items and
 then calls each item to serialize the actual key - value pair.
+
+The mapName argument is used to add context to the error messages (when encoding
+fails) and not used otherwise (ie does not appear in encoded map).
 */
-func (ef MapItems) EncodeMap(enc *msgpack.Encoder) error {
+func (ef MapItems) EncodeMap(mapName string, enc *msgpack.Encoder) error {
 	if err := enc.EncodeMapLen(len(ef)); err != nil {
-		return fmt.Errorf("encoding map length: %w", err)
+		return fmt.Errorf("encoding %s map length: %w", mapName, err)
 	}
 	for _, f := range ef {
 		if err := f(enc); err != nil {
-			return err
+			return fmt.Errorf("encoding %s item: %w", mapName, err)
 		}
 	}
 	return nil
@@ -105,7 +108,7 @@ EncoderFuncArray writes "named array".
 Returns function which can be used with MapItems.
 */
 func EncoderFuncArray[T any](key string, items []T, itemEnc func(T) error) MsgpackEncFunc {
-	return func(enc *msgpack.Encoder) (err error) {
+	return func(enc *msgpack.Encoder) error {
 		if err := enc.EncodeString(key); err != nil {
 			return fmt.Errorf("encoding array name %q: %w", key, err)
 		}
