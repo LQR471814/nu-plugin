@@ -5,6 +5,7 @@ import (
 	"maps"
 	"reflect"
 
+	"github.com/ainvaltin/nu-plugin/internal/mpack"
 	"github.com/vmihailenco/msgpack/v5"
 	"github.com/vmihailenco/msgpack/v5/msgpcode"
 )
@@ -29,9 +30,9 @@ type (
 	}
 
 	evaluatedCall struct {
-		Head       Span             `msgpack:"head"`
-		Positional positionalParams `msgpack:"positional"`
-		Named      NamedParams      `msgpack:"named"`
+		Head       Span
+		Positional positionalParams
+		Named      NamedParams
 	}
 
 	positionalParams []Value
@@ -159,6 +160,15 @@ func (r *run) decodeMsgpack(dec *msgpack.Decoder, p *Plugin) error {
 		}
 		return err
 	})
+}
+
+func (ec *evaluatedCall) encodeMsgpack(enc *msgpack.Encoder, p *Plugin) error {
+	v := mpack.MapItems{
+		mpack.EncoderFuncMarshal("head", ec.Head.encodeMsgpack),
+		mpack.EncoderFuncMarshal("positional", func(enc *msgpack.Encoder) error { return ec.Positional.encodeMsgpack(enc, p) }),
+		mpack.EncoderFuncMarshal("named", func(enc *msgpack.Encoder) error { return ec.Named.encodeMsgpack(enc, p) }),
+	}
+	return v.EncodeMap(enc)
 }
 
 func (ec *evaluatedCall) decodeMsgpack(dec *msgpack.Decoder, p *Plugin) error {

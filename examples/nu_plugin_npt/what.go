@@ -24,6 +24,9 @@ func cmdWhat() *nu.Command {
 			OptionalPositional: []nu.PositionalArg{
 				{Name: "input", Desc: "input for the command", Shape: syntaxshape.Any()},
 			},
+			RestPositional: &nu.PositionalArg{
+				Name: "rest", Desc: "Allow unknown number of optional arguments", Shape: syntaxshape.Any(),
+			},
 			Named: []nu.Flag{
 				{Long: "items", Short: 'i', Shape: syntaxshape.Int(), Default: &nu.Value{Value: 3}, Desc: "maximum number of items to output for Lists"},
 			},

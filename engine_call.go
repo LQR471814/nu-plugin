@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"reflect"
 
 	"github.com/vmihailenco/msgpack/v5"
 )
@@ -473,7 +472,7 @@ func (cd *callDecl) EncodeMsgpack(enc *msgpack.Encoder) error {
 		return err
 	}
 	call := evaluatedCall{Positional: cd.cfg.positional, Named: cd.cfg.named}
-	if err := enc.EncodeValue(reflect.ValueOf(&call)); err != nil {
+	if err := call.encodeMsgpack(enc, cd.cfg.p); err != nil {
 		return err
 	}
 

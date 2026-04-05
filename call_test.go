@@ -178,31 +178,6 @@ func (r *run) encodeMsgpack(enc *msgpack.Encoder, p *Plugin) error {
 	}
 }
 
-func (ec *evaluatedCall) encodeMsgpack(enc *msgpack.Encoder, p *Plugin) error {
-	if err := enc.EncodeMapLen(3); err != nil {
-		return fmt.Errorf("writing evaluatedCall map length: %w", err)
-	}
-	if err := enc.EncodeString("head"); err != nil {
-		return err
-	}
-	if err := ec.Head.encodeMsgpack(enc); err != nil {
-		return err
-	}
-	if err := enc.EncodeString("positional"); err != nil {
-		return err
-	}
-	if err := ec.Positional.encodeMsgpack(enc, p); err != nil {
-		return err
-	}
-	if err := enc.EncodeString("named"); err != nil {
-		return err
-	}
-	if err := ec.Named.encodeMsgpack(enc, p); err != nil {
-		return err
-	}
-	return nil
-}
-
 func (cr *callResponse) decodeMsgpack(dec *msgpack.Decoder, p *Plugin) (err error) {
 	if cr.ID, err = decodeTupleStart(dec); err != nil {
 		return fmt.Errorf("decoding CallResponse tuple: %w", err)
