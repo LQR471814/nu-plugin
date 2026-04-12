@@ -2,7 +2,7 @@ module github.com/ainvaltin/nu-plugin/examples/nu_plugin_npt
 
 go 1.25.1
 
-require github.com/ainvaltin/nu-plugin v0.0.0-20260319172125-fb620b236a4f
+require github.com/ainvaltin/nu-plugin v0.0.0-20260412125856-250783cdf17f
 
 require (
 	github.com/stretchr/testify v1.11.0 // indirect
