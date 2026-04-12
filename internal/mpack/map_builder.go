@@ -50,6 +50,12 @@ func (ef *MapItems) AddOptionalStr(key, value string) {
 	}
 }
 
+func (ef *MapItems) AddOptionalUInt(key string, value uint) {
+	if value != 0 {
+		*ef = append(*ef, EncoderFuncUInt(key, value))
+	}
+}
+
 /*
 AddOptionalEncoder adds the encoder function only if the add flag is true.
 */
@@ -81,6 +87,18 @@ func EncoderFuncInt(key string, value int) MsgpackEncFunc {
 			return fmt.Errorf("encoding key %q: %w", key, err)
 		}
 		if err = enc.EncodeInt(int64(value)); err != nil {
+			return fmt.Errorf("encoding value of the key %q: %w", key, err)
+		}
+		return nil
+	}
+}
+
+func EncoderFuncUInt(key string, value uint) MsgpackEncFunc {
+	return func(enc *msgpack.Encoder) (err error) {
+		if err = enc.EncodeString(key); err != nil {
+			return fmt.Errorf("encoding key %q: %w", key, err)
+		}
+		if err = enc.EncodeUint(uint64(value)); err != nil {
 			return fmt.Errorf("encoding value of the key %q: %w", key, err)
 		}
 		return nil

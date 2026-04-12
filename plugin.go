@@ -163,6 +163,7 @@ func (p *Plugin) mainMsgLoop(ctx context.Context) error {
 
 		if err := p.handleMessage(ctx, v); err != nil {
 			p.log.ErrorContext(ctx, "handling message", attrError(err), attrMsg(v))
+			//return err
 		}
 	}
 	return ctx.Err()
@@ -215,6 +216,7 @@ func (p *Plugin) handleCall(ctx context.Context, msg call) error {
 }
 
 func (p *Plugin) handleGetCompletion(ctx context.Context, callID int, data getCompletion) error {
+	p.log.DebugContext(ctx, "handleGetCompletion", "request", data)
 	// find the command
 	cmd, ok := p.cmds[data.Name]
 	if !ok {
@@ -228,8 +230,10 @@ func (p *Plugin) handleGetCompletion(ctx context.Context, callID int, data getCo
 		for _, v := range cmd.Signature.Named {
 			if v.Long == data.ArgType.Flag {
 				p.log.DebugContext(ctx, fmt.Sprintf("complete flag %q: %+v", v.Long, v))
-				if v.GetCompletions != nil {
-					rsp = v.GetCompletions()
+				if v.Completions != nil {
+					if getCompletions, ok := v.Completions.(DynamicCompletion); ok {
+						rsp = getCompletions()
+					}
 				}
 				break
 			}
@@ -240,8 +244,10 @@ func (p *Plugin) handleGetCompletion(ctx context.Context, callID int, data getCo
 			return err
 		}
 		p.log.DebugContext(ctx, fmt.Sprintf("complete argument: %+v", arg))
-		if arg.GetCompletions != nil {
-			rsp = arg.GetCompletions()
+		if arg.Completions != nil {
+			if getCompletions, ok := arg.Completions.(DynamicCompletion); ok {
+				rsp = getCompletions()
+			}
 		}
 	} else {
 		return fmt.Errorf("arg type is neither flag nor positional: %s", data.ArgType)

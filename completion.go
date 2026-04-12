@@ -11,6 +11,58 @@ import (
 )
 
 /*
+See [StaticCompletions] and [DynamicCompletion]
+*/
+type Completions interface {
+	isEncodedCompletion() bool
+	encodeMsgpack(enc *msgpack.Encoder) error
+}
+
+/*
+Static completions are registered when plugin is registered as part of
+the plugin signature.
+*/
+type StaticCompletions []string
+
+func (StaticCompletions) isEncodedCompletion() bool { return true }
+
+// List(NuCow<&'static [&'static str], Vec<String>>)
+func (c StaticCompletions) encodeMsgpack(enc *msgpack.Encoder) error {
+	if err := enc.EncodeString("completion"); err != nil {
+		return err
+	}
+	if err := encodeMapStart(enc, "List"); err != nil {
+		return err
+	}
+	if err := enc.EncodeArrayLen(len(c)); err != nil {
+		return err
+	}
+	for _, v := range c {
+		if err := enc.EncodeString(v); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+/*
+DynamicCompletion is a callback to provide completion suggestion(s) for positional
+argument or flag autocomplete.
+
+	Return:
+	  - nil to signal that engine should fall back to default completion (default behavior);
+	  - empty (non nil) slice to signal that there is no suggestions;
+	  - non empty slice with suggestions;
+*/
+type DynamicCompletion func() []DynamicSuggestion
+
+func (DynamicCompletion) isEncodedCompletion() bool { return false }
+
+func (DynamicCompletion) encodeMsgpack(enc *msgpack.Encoder) error {
+	return fmt.Errorf("DynamicCompletion is not msgpack encodable")
+}
+
+/*
 DynamicSuggestion is the data structure used in the response of the
 GetCompletion message to provide autocompletion items for a flag or
 positional argument.

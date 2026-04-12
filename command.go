@@ -7,6 +7,7 @@ import (
 
 	"github.com/vmihailenco/msgpack/v5"
 
+	"github.com/ainvaltin/nu-plugin/internal/mpack"
 	"github.com/ainvaltin/nu-plugin/syntaxshape"
 	"github.com/ainvaltin/nu-plugin/types"
 )
@@ -175,14 +176,8 @@ type PositionalArg struct {
 	Shape   syntaxshape.SyntaxShape
 	VarId   uint
 	Default *Value
-	/*
-	   Function called when plugin engine requests suggestions for argument autocomplete.
-	   Return:
-	     - nil to signal that engine should fall back to default completion (default behavior);
-	     - empty (non nil) slice to signal that there is no suggestions;
-	     - non empty slice with suggestions;
-	*/
-	GetCompletions func() []DynamicSuggestion
+	// Either [StaticCompletions] or [DynamicCompletion] to provide suggestions for argument autocomplete.
+	Completions Completions
 }
 
 /*
@@ -196,14 +191,8 @@ type Flag struct {
 	Desc     string
 	VarId    uint
 	Default  *Value
-	/*
-	   Function called when plugin engine requests suggestions for flag autocomplete.
-	   Return:
-	     - nil to signal that engine should fall back to default completion (default behavior);
-	     - empty (non nil) slice to signal that there is no suggestions;
-	     - non empty slice with suggestions;
-	*/
-	GetCompletions func() []DynamicSuggestion
+	// Either [StaticCompletions] or [DynamicCompletion] to provide suggestions for flag autocomplete.
+	Completions Completions
 }
 
 type Example struct {
@@ -291,88 +280,54 @@ func encodePositionalArgs(enc *msgpack.Encoder, pa []PositionalArg, p *Plugin) e
 	return nil
 }
 
-func (pa *PositionalArg) encodeMsgpack(enc *msgpack.Encoder, p *Plugin) (err error) {
-	cnt := 3 + bval(pa.VarId != 0) + bval(pa.Default != nil)
-	if err = enc.EncodeMapLen(cnt); err != nil {
-		return err
+func (arg *PositionalArg) encodeMsgpack(enc *msgpack.Encoder, p *Plugin) (err error) {
+	items := mpack.MapItems{
+		mpack.EncoderFuncString("name", arg.Name),
+		mpack.EncoderFuncString("desc", arg.Desc),
+		mpack.EncoderFuncMarshal("shape", arg.Shape.EncodeMsgpack),
+	}
+	items.AddOptionalUInt("var_id", arg.VarId)
+	items.AddOptionalEncoder(arg.Default != nil, func(enc *msgpack.Encoder) error {
+		if err = enc.EncodeString("default_value"); err != nil {
+			return fmt.Errorf("encoding default value key: %w", err)
+		}
+		if err = arg.Default.encodeMsgpack(enc, p); err != nil {
+			return fmt.Errorf("encoding default value: %w", err)
+		}
+		return nil
+	})
+	if arg.Completions != nil && arg.Completions.isEncodedCompletion() {
+		items = append(items, arg.Completions.encodeMsgpack)
 	}
 
-	if err = encodeString(enc, "name", pa.Name); err != nil {
-		return err
-	}
-	if err = encodeString(enc, "desc", pa.Desc); err != nil {
-		return err
-	}
-	if err = enc.EncodeString("shape"); err != nil {
-		return err
-	}
-	if err = pa.Shape.EncodeMsgpack(enc); err != nil {
-		return err
-	}
-	if pa.VarId != 0 {
-		if err = enc.EncodeString("var_id"); err != nil {
-			return err
-		}
-		if err = enc.EncodeUint(uint64(pa.VarId)); err != nil {
-			return err
-		}
-	}
-	if pa.Default != nil {
-		if err = enc.EncodeString("default_value"); err != nil {
-			return err
-		}
-		if err = pa.Default.encodeMsgpack(enc, p); err != nil {
-			return err
-		}
-	}
-	return nil
+	return items.EncodeMap("PositionalArg", enc)
 }
 
 func (flag *Flag) encodeMsgpack(enc *msgpack.Encoder, p *Plugin) (err error) {
-	cnt := 3 + bval(flag.Short != 0) + bval(flag.Shape != nil) + bval(flag.VarId != 0) + bval(flag.Default != nil)
-	if err = enc.EncodeMapLen(cnt); err != nil {
-		return err
+	items := mpack.MapItems{
+		mpack.EncoderFuncString("long", flag.Long),
+		mpack.EncoderFuncString("short", string(flag.Short)),
+		mpack.EncoderFuncString("desc", flag.Desc),
+		mpack.EncoderFuncBool("required", flag.Required),
 	}
-
-	if err = encodeString(enc, "long", flag.Long); err != nil {
-		return err
-	}
-	if flag.Short != 0 {
-		if err = encodeString(enc, "short", string(flag.Short)); err != nil {
-			return err
-		}
-	}
-	if err = encodeString(enc, "desc", flag.Desc); err != nil {
-		return err
-	}
-	if err = encodeBoolean(enc, "required", flag.Required); err != nil {
-		return err
-	}
+	items.AddOptionalUInt("var_id", flag.VarId)
 	if flag.Shape != nil {
-		if err = enc.EncodeString("arg"); err != nil {
-			return err
-		}
-		if err = flag.Shape.EncodeMsgpack(enc); err != nil {
-			return err
-		}
+		items = append(items, mpack.EncoderFuncMarshal("arg", flag.Shape.EncodeMsgpack))
 	}
-	if flag.VarId != 0 {
-		if err = enc.EncodeString("var_id"); err != nil {
-			return err
-		}
-		if err = enc.EncodeUint(uint64(flag.VarId)); err != nil {
-			return err
-		}
-	}
-	if flag.Default != nil {
+	items.AddOptionalEncoder(flag.Default != nil, func(enc *msgpack.Encoder) error {
 		if err = enc.EncodeString("default_value"); err != nil {
-			return err
+			return fmt.Errorf("encoding default value key: %w", err)
 		}
 		if err = flag.Default.encodeMsgpack(enc, p); err != nil {
-			return err
+			return fmt.Errorf("encoding default value: %w", err)
 		}
+		return nil
+	})
+	if flag.Completions != nil && flag.Completions.isEncodedCompletion() {
+		items = append(items, flag.Completions.encodeMsgpack)
 	}
-	return nil
+
+	return items.EncodeMap("PositionalArg", enc)
 }
 
 func encodeFlags(enc *msgpack.Encoder, flags []Flag, p *Plugin) error {

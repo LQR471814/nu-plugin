@@ -32,7 +32,7 @@ func cmdEngineCalls() *nu.Command {
 					Name:  "call",
 					Desc:  "API to call",
 					Shape: syntaxshape.String(),
-					GetCompletions: func() []nu.DynamicSuggestion {
+					Completions: nu.DynamicCompletion(func() []nu.DynamicSuggestion {
 						return []nu.DynamicSuggestion{
 							{Value: "GetPluginConfig", Description: "Get the configuration for the plugin"},
 							{Value: "GetEnvVars", Description: "Get all environment variables from the caller's scope"},
@@ -45,7 +45,7 @@ func cmdEngineCalls() *nu.Command {
 							{Value: "FindDeclaration", Description: "Find the declaration ID for a command in scope"},
 							{Value: "CallDecl", Description: `Call "FindDeclaration" and then call it (if declaration was found)`},
 						}
-					}},
+					})},
 			},
 			AllowMissingExamples: true,
 		},

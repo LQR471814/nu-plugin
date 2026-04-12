@@ -1,3 +1,9 @@
+## [2026-04-12]
+Add support for static completion items. As a result the `Flag`
+and `PositionalArg` types no longer have `GetCompletions` field, it
+has been replaced with `Completions` which can hold either
+`StaticCompletions` or `DynamicCompletion`.
+
 ## [2026-03-15]
 Initial support for parameter/flag autocomplete.
 
