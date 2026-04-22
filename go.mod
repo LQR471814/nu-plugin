@@ -1,4 +1,4 @@
-module github.com/ainvaltin/nu-plugin
+module github.com/LQR471814/nu-plugin
 
 go 1.23
 
